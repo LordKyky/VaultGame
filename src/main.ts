@@ -19,6 +19,9 @@ var dragging = false;
 var initialMouseAngle = 0;
 var initialHandleRotation = 0;
 var currentHandleRotation = 0; // Track the current rotation
+var snappedHandleRotation = 0; // Track the last snapped rotation at 60-degree increments
+var previousHandleRotation = 0; // Track the previous rotation
+var counter = 0; // Initialize the counter
 
 (async () =>
   {
@@ -120,7 +123,8 @@ var currentHandleRotation = 0; // Track the current rotation
           sound.add('Click', 'assets/metalClick.mp3')
 
           // Save the initial rotation and the mouse angle on pointerdown
-          handle.on('pointerdown', (event: InteractionEvent) => {
+          handle.on('pointerdown', (event: InteractionEvent) => 
+          {
             dragging = true;
             const global = event.data.global;
             initialMouseAngle = Math.atan2(global.y - handle.y, global.x - handle.x);
@@ -128,8 +132,10 @@ var currentHandleRotation = 0; // Track the current rotation
           });
           
           // On pointerup, snap the rotation and stop dragging
-          handle.on('pointerup', () => {
-            if (dragging) {
+          handle.on('pointerup', () => 
+          {
+            if (dragging) 
+            {
               dragging = false;
         
               // Snap rotation to 60-degree increments
@@ -140,13 +146,16 @@ var currentHandleRotation = 0; // Track the current rotation
             }
           });
           
-          handle.on('pointerupoutside', () => {
+          handle.on('pointerupoutside', () => 
+          {
             dragging = false;
           });
           
           // Rotate the handle during dragging
-          handle.on('pointermove', (event: InteractionEvent) => {
-            if (dragging) {
+          handle.on('pointermove', (event: InteractionEvent) => 
+          {
+            if (dragging) 
+            {
               const global = event.data.global;
               const currentMouseAngle = Math.atan2(global.y - handle.y, global.x - handle.x);
               const angleDelta = currentMouseAngle - initialMouseAngle;
@@ -154,14 +163,50 @@ var currentHandleRotation = 0; // Track the current rotation
               // Update the current handle rotation
               currentHandleRotation = initialHandleRotation + angleDelta;
 
-              
               // Normalize rotation to stay within 0 and 2 * PI
               while (currentHandleRotation < 0) currentHandleRotation += 2 * Math.PI;
               while (currentHandleRotation >= 2 * Math.PI) currentHandleRotation -= 2 * Math.PI;
+
+              const snappedRotation = Math.round(currentHandleRotation / (Math.PI / 3)) * (Math.PI / 3);
+
+              // Determine the direction of rotation
+              let rotationDifference = snappedRotation - snappedHandleRotation;
+
+              // If the rotation crosses 0 or 360 degrees (2 * Math.PI), adjust the difference
+              if (rotationDifference > Math.PI) 
+              {
+                rotationDifference -= 2 * Math.PI;
+              } 
+              else if (rotationDifference < -Math.PI) 
+              {
+                rotationDifference += 2 * Math.PI;
+              }
+              
+              // Detect full 60-degree increments and trigger action
+              if (Math.abs(rotationDifference) >= (Math.PI / 3) -0.01) // Small tolerance
+              { 
+                if (rotationDifference > 0) 
+                {
+                    console.log('Rotated Clockwise');
+                } 
+                else 
+                {
+                    console.log('Rotated Counterclockwise');
+                }
+                sound.play('Click'); // Play sound on successful 60-degree rotation
+    
+                // Update the last snapped rotation
+                snappedHandleRotation = snappedRotation;
+              }
+    
+              // Update the last snapped rotation
+              //snappedHandleRotation = snappedRotation;
+              //currentHandleRotation = snappedRotation; // Update current rotation
         
               // Apply the new rotation directly
               handle.rotation = currentHandleRotation;
               handleShadow.rotation = currentHandleRotation;
+              //console.log(currentHandleRotation);
             }
           });
         });
