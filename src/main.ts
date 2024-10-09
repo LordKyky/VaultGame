@@ -5,6 +5,7 @@ import { setupCounter } from './counter.ts'
 
 import { Application, Assets, Sprite } from 'pixi.js';
 import { InteractionEvent } from 'pixi.js';
+import { sound } from '@pixi/sound'; // Import the sound module
 
 import { gsap } from "gsap";   
 import { PixiPlugin } from "gsap/PixiPlugin";
@@ -15,8 +16,9 @@ var size = [1920, 1080];
 var ratio = size[0] / size[1];
 
 var dragging = false;
-var rotationStart = 0;
-var currentRotation = 0;
+var initialMouseAngle = 0;
+var initialHandleRotation = 0;
+var currentHandleRotation = 0; // Track the current rotation
 
 (async () =>
   {
@@ -115,43 +117,53 @@ var currentRotation = 0;
 
           app.stage.addChild(handle);
 
+          sound.add('Click', 'assets/metalClick.mp3')
+
+          // Save the initial rotation and the mouse angle on pointerdown
           handle.on('pointerdown', (event: InteractionEvent) => {
             dragging = true;
-            // Save the initial rotation
-            rotationStart = event.data.getLocalPosition(handle).x;
+            const global = event.data.global;
+            initialMouseAngle = Math.atan2(global.y - handle.y, global.x - handle.x);
+            initialHandleRotation = handle.rotation;
           });
           
-          handle.on('pointerup', () => 
-          {
-            if (dragging) 
-            {
-                dragging = false;
-                // Snap rotation to 60-degree increments
-                const snappedRotation = Math.round(currentRotation / (Math.PI / 3)) * (Math.PI / 3);
-                
-                gsap.to(handle, { rotation: snappedRotation, duration: 0.3 });
-                currentRotation = snappedRotation; // Save snapped rotation
+          // On pointerup, snap the rotation and stop dragging
+          handle.on('pointerup', () => {
+            if (dragging) {
+              dragging = false;
+        
+              // Snap rotation to 60-degree increments
+              const snappedRotation = Math.round(currentHandleRotation / (Math.PI / 3)) * (Math.PI / 3);
+              gsap.to(handle, { rotation: snappedRotation, duration: 0.3 });
+              gsap.to(handleShadow, { rotation: snappedRotation, duration: 0.3 });
+              currentHandleRotation = snappedRotation; // Update current rotation
             }
           });
           
-          handle.on('pointerupoutside', () => 
-          {
+          handle.on('pointerupoutside', () => {
             dragging = false;
           });
           
-          handle.on('pointermove', (event: InteractionEvent) => 
-          {
-            if (dragging) 
-            {
-              const newPosition = event.data.getLocalPosition(handle);
-              const angle = Math.atan2(newPosition.y, newPosition.x); // Get angle from center
+          // Rotate the handle during dragging
+          handle.on('pointermove', (event: InteractionEvent) => {
+            if (dragging) {
+              const global = event.data.global;
+              const currentMouseAngle = Math.atan2(global.y - handle.y, global.x - handle.x);
+              const angleDelta = currentMouseAngle - initialMouseAngle;
+        
+              // Update the current handle rotation
+              currentHandleRotation = initialHandleRotation + angleDelta;
+
               
-              // Rotate the valve smoothly
-              handle.rotation = angle;
-              handleShadow.rotation = angle;
-              currentRotation = angle; // Update current rotation
+              // Normalize rotation to stay within 0 and 2 * PI
+              while (currentHandleRotation < 0) currentHandleRotation += 2 * Math.PI;
+              while (currentHandleRotation >= 2 * Math.PI) currentHandleRotation -= 2 * Math.PI;
+        
+              // Apply the new rotation directly
+              handle.rotation = currentHandleRotation;
+              handleShadow.rotation = currentHandleRotation;
             }
-        });
+          });
         });
       });
   })();
