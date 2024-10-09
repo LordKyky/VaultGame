@@ -18,9 +18,14 @@ var ratio = size[0] / size[1];
 var dragging = false;
 var initialMouseAngle = 0;
 var initialHandleRotation = 0;
+
 var currentHandleRotation = 0; // Track the current rotation
 var snappedHandleRotation = 0; // Track the last snapped rotation at 60-degree increments
 var counter = 0; // Initialize the counter
+
+// Track the current step in the sequence
+let currentStep = 0;
+let successfulSteps = 0;
 
 // Function to generate random number between min and max
 function getRandomInt(min: number, max: number): number 
@@ -147,11 +152,16 @@ function generateSecretCode(length: number): number[] {
 
           app.stage.addChild(handle);
 
-          sound.add('Click', 'assets/metalClick.mp3')
+          sound.add('Click', 'assets/metalClick.mp3');
+          sound.add('Success', 'assets/success.mp3');
           
           // Log the generated secret code in the console
           const secretCode = generateSecretCode(3);  // Generate 5-digit combination
           console.log("Secret Code:", secretCode);
+
+          let currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
+          let targetSteps = Math.abs(secretCode[currentStep]); // Steps required for the current step
+          let isClockwise = secretCode[currentStep] > 0; // Direction for current step (true if positive)
 
           // Save the initial rotation and the mouse angle on pointerdown
           handle.on('pointerdown', (event: InteractionEvent) => 
@@ -219,15 +229,48 @@ function generateSecretCode(length: number): number[] {
                 if (rotationDifference > 0) 
                 {
                     console.log('Rotated Clockwise');
+
+                    if (isClockwise) 
+                    {
+                      currentRotationSteps++;
+                    } 
+                    else 
+                    {
+                      currentRotationSteps = 0; // Reset if wrong direction
+                    }
                 } 
                 else 
                 {
                     console.log('Rotated Counterclockwise');
+
+                    if (!isClockwise) 
+                    {
+                      currentRotationSteps++;
+                    } 
+                    else 
+                    {
+                      currentRotationSteps = 0; // Reset if wrong direction
+                    }
                 }
                 sound.play('Click'); // Play sound on successful 60-degree rotation
     
                 // Update the last snapped rotation
                 snappedHandleRotation = snappedRotation;
+
+                // Check if the step was completed
+                if (currentRotationSteps >= targetSteps) {
+                  successfulSteps++;
+                  currentStep++;
+                  if (currentStep >= secretCode.length) {
+                      console.log('Secret code entered successfully!');
+                      sound.play('Success'); // Play success sound
+                  } else {
+                      // Move to the next step
+                      targetSteps = Math.abs(secretCode[currentStep]);
+                      isClockwise = secretCode[currentStep] > 0;
+                      currentRotationSteps = 0; // Reset for next step
+                  }
+              }
               }
     
               // Update the last snapped rotation
