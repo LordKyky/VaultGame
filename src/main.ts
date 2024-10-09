@@ -55,6 +55,22 @@ function generateSecretCode(length: number): number[] {
   return code;
 }
 
+// Function to hide door and handle, and disable interaction
+function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, doorOpen: Sprite, doorOpenShadow: Sprite) {
+  // Hide the door and handle
+  door.visible = false;
+  handle.visible = false;
+  handleShadow.visible = false;
+
+  // Show Open door
+  doorOpenShadow.visible = true;
+  doorOpen.visible = true;
+
+  // Disable interaction with the handle
+  handle.interactive = false;
+  handle.eventMode = 'none'; // Disable event handling
+}
+
 (async () =>
   {
     // Create a new application
@@ -73,12 +89,14 @@ function generateSecretCode(length: number): number[] {
         Assets.add({ alias: 'door', src: 'assets/door.png' });
         Assets.add({ alias: 'handleShadow', src: 'assets/handleShadow.png' });
         Assets.add({ alias: 'handle', src: 'assets/handle.png' });
+        Assets.add({ alias: 'doorOpenShadow', src: 'assets/doorOpenShadow.png' });
+        Assets.add({ alias: 'doorOpen', src: 'assets/doorOpen.png' });
     
         // Start loading right away and create a promise
         //const texturePromise = Assets.load('https://pixijs.com/assets/bunny.png');
   
         // Load the assets and get a resolved promise once both are loaded
-        const texturesPromise = Assets.load(['bg', 'door', 'handleShadow', 'handle']); // => Promise<{flowerTop: Texture, eggHead: Texture}>
+        const texturesPromise = Assets.load(['bg', 'door', 'handleShadow', 'handle', 'doorOpenShadow', 'doorOpen']); // => Promise<{flowerTop: Texture, eggHead: Texture}>
   
     
         // When the promise resolves, we have the textures!
@@ -146,18 +164,53 @@ function generateSecretCode(length: number): number[] {
           handle.width = door.width / 2.95;
           handle.height = door.height / 2.55;
 
+          app.stage.addChild(handle);
+
+          // Create a new Sprite from the resolved loaded Texture for doorOpenShadow
+          const doorOpenShadow = Sprite.from(textures.doorOpenShadow);
+
+          // Center the sprite's anchor point
+          doorOpenShadow.anchor.set(0.5);
+
+          // Move the door sprite to the center of the screen
+          doorOpenShadow.x = app.screen.width / 1.3 + 14;
+          doorOpenShadow.y = app.screen.height / 1.92 - 9.5;
+
+          // Set height and width of door to the screen size
+          doorOpenShadow.width = app.screen.width / 4;
+          doorOpenShadow.height = app.screen.height / 1.55;
+
+          app.stage.addChild(doorOpenShadow);
+
+          // Create a new Sprite from the resolved loaded Texture for doorOpen
+          const doorOpen = Sprite.from(textures.doorOpen);
+
+          // Center the sprite's anchor point
+          doorOpen.anchor.set(0.5);
+
+          // Move the door sprite to the center of the screen
+          doorOpen.x = app.screen.width / 1.33 + 14;
+          doorOpen.y = app.screen.height / 2 - 9.5;
+
+          // Set height and width of door to the screen size
+          doorOpen.width = app.screen.width / 4;
+          doorOpen.height = app.screen.height / 1.55;
+
+          app.stage.addChild(doorOpen);
+
+          doorOpenShadow.visible = false;
+          doorOpen.visible = false;
+
+          // Log the generated secret code in the console
+          const secretCode = generateSecretCode(3);  // Generate 5-digit combination
+          console.log("Secret Code:", secretCode);
+
           handle.interactive = true;
           handle.eventMode = 'static';
           handle.cursor = 'pointer';
 
-          app.stage.addChild(handle);
-
           sound.add('Click', 'assets/metalClick.mp3');
           sound.add('Success', 'assets/success.mp3');
-          
-          // Log the generated secret code in the console
-          const secretCode = generateSecretCode(3);  // Generate 5-digit combination
-          console.log("Secret Code:", secretCode);
 
           let currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
           let targetSteps = Math.abs(secretCode[currentStep]); // Steps required for the current step
@@ -264,6 +317,7 @@ function generateSecretCode(length: number): number[] {
                   if (currentStep >= secretCode.length) {
                       console.log('Secret code entered successfully!');
                       sound.play('Success'); // Play success sound
+                      hideDoorAndHandle(door, handle, handleShadow, doorOpen, doorOpenShadow); // Hide door and handle
                   } else {
                       // Move to the next step
                       targetSteps = Math.abs(secretCode[currentStep]);
