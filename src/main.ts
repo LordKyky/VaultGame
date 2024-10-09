@@ -20,8 +20,35 @@ var initialMouseAngle = 0;
 var initialHandleRotation = 0;
 var currentHandleRotation = 0; // Track the current rotation
 var snappedHandleRotation = 0; // Track the last snapped rotation at 60-degree increments
-var previousHandleRotation = 0; // Track the previous rotation
 var counter = 0; // Initialize the counter
+
+// Function to generate random number between min and max
+function getRandomInt(min: number, max: number): number 
+{
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Function to generate secret combination
+function generateSecretCode(length: number): number[] {
+  const code = [];
+
+  // Randomly decide whether to start with positive or negative
+  let startPositive = Math.random() < 0.5;
+
+  for (let i = 0; i < length; i++) {
+      // Generate a random number between 1 and 9
+      let randomNum = getRandomInt(1, 9);
+      
+      // Alternate between positive and negative starting with the random sign
+      if ((i % 2 === 0 && !startPositive) || (i % 2 !== 0 && startPositive)) {
+        randomNum = -randomNum;
+    }
+      
+      // Push the number into the array
+      code.push(randomNum);
+  }
+  return code;
+}
 
 (async () =>
   {
@@ -121,6 +148,10 @@ var counter = 0; // Initialize the counter
           app.stage.addChild(handle);
 
           sound.add('Click', 'assets/metalClick.mp3')
+          
+          // Log the generated secret code in the console
+          const secretCode = generateSecretCode(3);  // Generate 5-digit combination
+          console.log("Secret Code:", secretCode);
 
           // Save the initial rotation and the mouse angle on pointerdown
           handle.on('pointerdown', (event: InteractionEvent) => 
