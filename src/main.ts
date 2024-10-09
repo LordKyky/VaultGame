@@ -4,6 +4,7 @@ import viteLogo from '/vite.svg'
 import { setupCounter } from './counter.ts'
 
 import { Application, Assets, Sprite } from 'pixi.js';
+import { InteractionEvent } from 'pixi.js';
 
 import { gsap } from "gsap";   
 import { PixiPlugin } from "gsap/PixiPlugin";
@@ -12,6 +13,10 @@ gsap.registerPlugin(PixiPlugin);
 
 var size = [1920, 1080];
 var ratio = size[0] / size[1];
+
+var dragging = false;
+var rotationStart = 0;
+var currentRotation = 0;
 
 (async () =>
   {
@@ -85,8 +90,8 @@ var ratio = size[0] / size[1];
           handleShadow.y = door.y * 1.03;
 
           // Set height and width of handle shadow to the door size
-          handleShadow.width = door.width / 2.85;
-          handleShadow.height = door.height / 2.6;
+          handleShadow.width = door.width / 2.95;
+          handleShadow.height = door.height / 2.55;
 
           app.stage.addChild(handleShadow);
 
@@ -101,10 +106,52 @@ var ratio = size[0] / size[1];
           handle.y = door.y;
 
           // Set height and width of handle shadow to the door size
-          handle.width = door.width / 2.85;
-          handle.height = door.height / 2.6;
+          handle.width = door.width / 2.95;
+          handle.height = door.height / 2.55;
+
+          handle.interactive = true;
+          handle.eventMode = 'static';
+          handle.cursor = 'pointer';
 
           app.stage.addChild(handle);
+
+          handle.on('pointerdown', (event: InteractionEvent) => {
+            dragging = true;
+            // Save the initial rotation
+            rotationStart = event.data.getLocalPosition(handle).x;
+          });
+          
+          handle.on('pointerup', () => 
+          {
+            if (dragging) 
+            {
+                dragging = false;
+                // Snap rotation to 60-degree increments
+                const snappedRotation = Math.round(currentRotation / (Math.PI / 3)) * (Math.PI / 3);
+                
+                gsap.to(handle, { rotation: snappedRotation, duration: 0.3 });
+                currentRotation = snappedRotation; // Save snapped rotation
+            }
+          });
+          
+          handle.on('pointerupoutside', () => 
+          {
+            dragging = false;
+          });
+          
+          handle.on('pointermove', (event: InteractionEvent) => 
+          {
+            if (dragging) 
+            {
+              const newPosition = event.data.getLocalPosition(handle);
+              const angle = Math.atan2(newPosition.y, newPosition.x); // Get angle from center
+              
+              // Rotate the valve smoothly
+              handle.rotation = angle;
+              handleShadow.rotation = angle;
+              currentRotation = angle; // Update current rotation
+            }
+        });
         });
       });
   })();
