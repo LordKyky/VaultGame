@@ -4,8 +4,8 @@ import viteLogo from '/vite.svg'
 import { setupCounter } from './counter.ts'
 
 import { Application, Assets, Sprite } from 'pixi.js';
-import { InteractionEvent } from 'pixi.js';
 import { sound } from '@pixi/sound'; // Import the sound module
+import { Text } from 'pixi.js';
 
 import { gsap } from "gsap";   
 import { PixiPlugin } from "gsap/PixiPlugin";
@@ -31,6 +31,14 @@ let targetSteps = 0;
 let isClockwise = true;
 
 var secretCode:number[] = [];
+
+var isCounting = true;
+var elapsedTime = 0;
+var timerText = new Text
+({
+  text: 'AAAAA',
+  style: {fill: 0x00f000, fontSize: 64, fontFamily: 'Arial'}
+});
 
 // Function to generate random number between min and max
 function getRandomInt(min: number, max: number): number 
@@ -79,6 +87,7 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
 
 // Function to spin the handle and return a Promise
 function spinHandle(handle: Sprite, handleShadow: Sprite, rotations: number): Promise<void> {
+  isCounting = false;
   handle.interactive = false; // Disable interaction with the handle
   handle.eventMode = 'none'; // Disable event handling
   dragging = false;
@@ -113,6 +122,11 @@ function resetGame(door: Sprite, handle: Sprite, handleShadow: Sprite, doorOpen:
       snappedHandleRotation = 0;
       currentHandleRotation = 0;
       currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
+      timerText.text = 0;
+      elapsedTime = 0;
+      isCounting = true;
+
+      startTimer()
 
       // Generate new secret code
       secretCode = generateSecretCode(3);
@@ -126,6 +140,15 @@ function resetGame(door: Sprite, handle: Sprite, handleShadow: Sprite, doorOpen:
 // Function to return a promise that resolves after a delay (acts like setTimeout)
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function startTimer() {
+  while (isCounting) {
+    await delay(1000); // Wait for 1 second
+    elapsedTime++; // Increment elapsed time
+    timerText.text = elapsedTime.toString();
+    //console.log(elapsedTime);
+  }
 }
 
 (async () =>
@@ -255,6 +278,18 @@ function delay(ms: number) {
 
           app.stage.addChild(doorOpen);
 
+          timerText.anchor.set(0.5); // This will set the origin to center. (0.5) is same as (0.5, 0.5).
+
+          timerText.x = app.screen.width / 3.3;
+          timerText.y = app.screen.height / 2.21;
+
+          timerText.width = app.screen.width / 35;
+          timerText.height = app.screen.height / 30;
+
+          timerText.text = 0;
+
+          app.stage.addChild(timerText);
+
           doorOpenShadow.visible = false;
           doorOpen.visible = false;
 
@@ -270,12 +305,14 @@ function delay(ms: number) {
           sound.add('Success', 'assets/success.mp3');
           sound.add('Fail', 'assets/wrongLock.mp3');
 
+          startTimer()
+
           currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
           targetSteps = Math.abs(secretCode[currentStep]); // Steps required for the current step
           isClockwise = secretCode[currentStep] > 0; // Direction for current step (true if positive)
 
           // Save the initial rotation and the mouse angle on pointerdown
-          handle.on('pointerdown', (event: InteractionEvent) => 
+          handle.on('pointerdown', (event) => 
           {
             dragging = true;
             const global = event.data.global;
@@ -304,7 +341,7 @@ function delay(ms: number) {
           });
           
           // Rotate the handle during dragging
-          handle.on('pointermove', (event: InteractionEvent) => 
+          handle.on('pointermove', (event) => 
           {
             if (dragging) 
             {
@@ -382,6 +419,7 @@ function delay(ms: number) {
                       hideDoorAndHandle(door, handle, handleShadow, doorOpen, doorOpenShadow); // Hide door and handle
 
                       // Use promise-based delay instead of setTimeout for reset
+                      isCounting = false;
                       delay(5000).then(() => {
                         resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after 5 seconds
                       });
