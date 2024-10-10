@@ -1,19 +1,14 @@
 import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
 
 import { Application, Assets, Sprite } from 'pixi.js';
 import { sound } from '@pixi/sound'; // Import the sound module
 import { Text } from 'pixi.js';
+import { Container } from 'pixi.js';
 
 import { gsap } from "gsap";   
 import { PixiPlugin } from "gsap/PixiPlugin";
 
 gsap.registerPlugin(PixiPlugin);
-
-var size = [1920, 1080];
-var ratio = size[0] / size[1];
 
 var dragging = false;
 var initialMouseAngle = 0;
@@ -21,7 +16,6 @@ var initialHandleRotation = 0;
 
 var currentHandleRotation = 0; // Track the current rotation
 var snappedHandleRotation = 0; // Track the last snapped rotation at 60-degree increments
-var counter = 0; // Initialize the counter
 
 // Track the current step in the sequence
 let currentStep = 0;
@@ -171,13 +165,10 @@ async function startTimer() {
         Assets.add({ alias: 'handle', src: 'assets/handle.png' });
         Assets.add({ alias: 'doorOpenShadow', src: 'assets/doorOpenShadow.png' });
         Assets.add({ alias: 'doorOpen', src: 'assets/doorOpen.png' });
-    
-        // Start loading right away and create a promise
-        //const texturePromise = Assets.load('https://pixijs.com/assets/bunny.png');
+        Assets.add({ alias: 'sparkle', src: 'assets/blink.png' });
   
         // Load the assets and get a resolved promise once both are loaded
-        const texturesPromise = Assets.load(['bg', 'door', 'handleShadow', 'handle', 'doorOpenShadow', 'doorOpen']); // => Promise<{flowerTop: Texture, eggHead: Texture}>
-  
+        const texturesPromise = Assets.load(['bg', 'door', 'handleShadow', 'handle', 'doorOpenShadow', 'doorOpen', 'sparkle']); // => Promise<{flowerTop: Texture, eggHead: Texture}>
     
         // When the promise resolves, we have the textures!
         texturesPromise.then((textures) =>
@@ -277,6 +268,28 @@ async function startTimer() {
           doorOpen.height = app.screen.height / 1.55;
 
           app.stage.addChild(doorOpen);
+
+          const sparkleTexture = textures.sparkle;
+
+          const glitterContainer = new Container();
+          app.stage.addChild(glitterContainer);
+
+          function createGlitterEffect() 
+          {
+            for (let i = 0; i < 10; i++) {
+                const sparkle = new Sprite(sparkleTexture);
+                sparkle.anchor.set(0.5);
+                sparkle.scale.set(0); // Start with scale 0 for the animation
+                sparkle.x = door.x + Math.random() * 200 - 100;
+                sparkle.y = door.y * 1.2 + Math.random() * 200 - 100;
+                glitterContainer.addChild(sparkle);
+                
+                // Animate the sparkle using GSAP
+                gsap.to(sparkle, { rotation: `+=${Math.PI * Math.random() * 2}`, duration: 1 });
+                gsap.to(sparkle.scale, { x: 0.25, y: 0.25, duration: 0.5, delay: Math.random() * 0.5, ease: 'power2.out' });
+                gsap.to(sparkle, { alpha: 0, duration: Math.random() * 1.5, delay: Math.random() * 0.5, onComplete: () => {glitterContainer.removeChild(sparkle)} });
+            }
+          }
 
           timerText.anchor.set(0.5); // This will set the origin to center. (0.5) is same as (0.5, 0.5).
 
@@ -384,7 +397,6 @@ async function startTimer() {
                     } 
                     else 
                     {
-                      //currentRotationSteps = 0; // Reset if wrong direction
                       resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after wrong direction
                       sound.play('Fail');
                     }
@@ -399,7 +411,6 @@ async function startTimer() {
                     } 
                     else 
                     {
-                      //currentRotationSteps = 0; // Reset if wrong direction
                       resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after wrong direction
                       sound.play('Fail');
                     }
@@ -420,6 +431,7 @@ async function startTimer() {
 
                       // Use promise-based delay instead of setTimeout for reset
                       isCounting = false;
+                      createGlitterEffect();
                       delay(5000).then(() => {
                         resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after 5 seconds
                       });
@@ -431,11 +443,7 @@ async function startTimer() {
                   }
               }
               }
-    
-              // Update the last snapped rotation
-              //snappedHandleRotation = snappedRotation;
-              //currentHandleRotation = snappedRotation; // Update current rotation
-        
+              
               // Apply the new rotation directly
               handle.rotation = currentHandleRotation;
               handleShadow.rotation = currentHandleRotation;
