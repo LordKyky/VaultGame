@@ -9,6 +9,16 @@ cd ./VaultGame
 # Start the project in dev build 
 npm run dev
 
-# Open given link in terminal 
-Local:   http://localhost:5173/
+# Open given link in terminal for dev build
+Local:   http://localhost:XXXX/
 ```
+# Build and run project for production
+```sh
+# Create production build
+npm run build
+# Start the preview of production build 
+npm run preview
+# Open given link in terminal for production build
+Local:   http://localhost:XXXX/
+```
+https://lordkyky.itch.io/vault-mini-game
