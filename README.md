@@ -1,3 +1,4 @@
+# [Live Build](https://lordkyky.itch.io/vault-mini-game)
 # Setup and run the game
 ```sh
 # Clone the repository
@@ -21,4 +22,3 @@ npm run preview
 # Open given link in terminal for production build
 Local:   http://localhost:XXXX/
 ```
-# [Live Build](https://lordkyky.itch.io/vault-mini-game)
