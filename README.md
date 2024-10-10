@@ -21,4 +21,4 @@ npm run preview
 # Open given link in terminal for production build
 Local:   http://localhost:XXXX/
 ```
-https://lordkyky.itch.io/vault-mini-game
+# [Live Build](https://lordkyky.itch.io/vault-mini-game)
