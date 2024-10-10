@@ -4,7 +4,7 @@
 git clone https://github.com/LordKyky/VaultGame
 
 # Change directory to the repository
-cd ./bubbo-bubbo
+cd ./VaultGame
 
 # Start the project in dev build 
 npm run dev
