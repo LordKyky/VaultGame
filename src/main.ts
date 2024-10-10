@@ -26,6 +26,11 @@ var counter = 0; // Initialize the counter
 // Track the current step in the sequence
 let currentStep = 0;
 let successfulSteps = 0;
+let currentRotationSteps =0
+let targetSteps = 0;
+let isClockwise = true;
+
+var secretCode:number[] = [];
 
 // Function to generate random number between min and max
 function getRandomInt(min: number, max: number): number 
@@ -69,6 +74,58 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
   // Disable interaction with the handle
   handle.interactive = false;
   handle.eventMode = 'none'; // Disable event handling
+  dragging = false;
+}
+
+// Function to spin the handle and return a Promise
+function spinHandle(handle: Sprite, handleShadow: Sprite, rotations: number): Promise<void> {
+  handle.interactive = false; // Disable interaction with the handle
+  handle.eventMode = 'none'; // Disable event handling
+  dragging = false;
+
+  return new Promise((resolve) => {
+    gsap.to(handle, { rotation: `+=${Math.PI * rotations}`, duration: 1, onComplete: () => {
+      // After the spin, return the handle to its initial rotation
+      gsap.to(handle, { rotation: 0, duration: 1, onComplete: resolve });
+    }});
+    gsap.to(handleShadow, { rotation: `+=${Math.PI * rotations}`, duration: 1, onComplete: () => {
+      gsap.to(handleShadow, { rotation: 0, duration: 1 });
+    }});
+  });
+}
+
+// Reset game logic using promises
+function resetGame(door: Sprite, handle: Sprite, handleShadow: Sprite, doorOpen: Sprite, doorOpenShadow: Sprite) {
+  spinHandle(handle, handleShadow, 4) // Spin the handle x times (wild rotations)
+    .then(() => {
+      // Make door and handle visible again
+      door.visible = true;
+      handle.visible = true;
+      handleShadow.visible = true;
+      doorOpenShadow.visible = false;
+      doorOpen.visible = false;
+      handle.interactive = true;
+      handle.eventMode = 'static';
+
+      // Reset variables
+      currentStep = 0;
+      successfulSteps = 0;
+      snappedHandleRotation = 0;
+      currentHandleRotation = 0;
+      currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
+
+      // Generate new secret code
+      secretCode = generateSecretCode(3);
+      console.log("New Secret Code:", secretCode);
+
+      targetSteps = Math.abs(secretCode[currentStep]); // Steps required for the current step
+      isClockwise = secretCode[currentStep] > 0; // Direction for current step (true if positive)
+    });
+}
+
+// Function to return a promise that resolves after a delay (acts like setTimeout)
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 (async () =>
@@ -202,7 +259,7 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
           doorOpen.visible = false;
 
           // Log the generated secret code in the console
-          const secretCode = generateSecretCode(3);  // Generate 5-digit combination
+          secretCode = generateSecretCode(3);  // Generate 5-digit combination
           console.log("Secret Code:", secretCode);
 
           handle.interactive = true;
@@ -211,10 +268,11 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
 
           sound.add('Click', 'assets/metalClick.mp3');
           sound.add('Success', 'assets/success.mp3');
+          sound.add('Fail', 'assets/wrongLock.mp3');
 
-          let currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
-          let targetSteps = Math.abs(secretCode[currentStep]); // Steps required for the current step
-          let isClockwise = secretCode[currentStep] > 0; // Direction for current step (true if positive)
+          currentRotationSteps = 0; // Accumulated steps (each step is 60 degrees)
+          targetSteps = Math.abs(secretCode[currentStep]); // Steps required for the current step
+          isClockwise = secretCode[currentStep] > 0; // Direction for current step (true if positive)
 
           // Save the initial rotation and the mouse angle on pointerdown
           handle.on('pointerdown', (event: InteractionEvent) => 
@@ -289,7 +347,9 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
                     } 
                     else 
                     {
-                      currentRotationSteps = 0; // Reset if wrong direction
+                      //currentRotationSteps = 0; // Reset if wrong direction
+                      resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after wrong direction
+                      sound.play('Fail');
                     }
                 } 
                 else 
@@ -302,7 +362,9 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
                     } 
                     else 
                     {
-                      currentRotationSteps = 0; // Reset if wrong direction
+                      //currentRotationSteps = 0; // Reset if wrong direction
+                      resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after wrong direction
+                      sound.play('Fail');
                     }
                 }
                 sound.play('Click'); // Play sound on successful 60-degree rotation
@@ -318,6 +380,11 @@ function hideDoorAndHandle(door: Sprite, handle: Sprite, handleShadow: Sprite, d
                       console.log('Secret code entered successfully!');
                       sound.play('Success'); // Play success sound
                       hideDoorAndHandle(door, handle, handleShadow, doorOpen, doorOpenShadow); // Hide door and handle
+
+                      // Use promise-based delay instead of setTimeout for reset
+                      delay(5000).then(() => {
+                        resetGame(door, handle, handleShadow, doorOpen, doorOpenShadow); // Reset after 5 seconds
+                      });
                   } else {
                       // Move to the next step
                       targetSteps = Math.abs(secretCode[currentStep]);
